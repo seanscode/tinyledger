@@ -1,0 +1,388 @@
+openapi: 3.0.3
+
+info:
+  title: Tiny Ledger API
+  description: |
+    Supports ledger creation, deposits,
+    withdrawals, balance enquiries, and transaction history.
+
+    Monetary amounts are represented as integer minor units.
+    $10.50 is represented as 1050.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8888
+    description: assumes server runs on local host
+
+paths:
+
+  /ledger:
+    post:
+      summary: Create a ledger
+      description: Creates a new ledger with a zero balance.
+      operationId: createLedger
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLedgerRequest'
+            example:
+              currency: EUR
+
+      responses:
+        '201':
+          description: Ledger created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ledger'
+              example:
+                id: "342342-42343242-42334"
+                balance: 0
+                currency: GBP
+                createdAt: "2026-09-26T12:00:00Z"
+
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ledger/{ledgerId}/transactions:
+    parameters:
+      - name: ledgerId
+        in: path
+        required: true
+        description: Unique identifier of the ledger.
+        schema:
+          type: string
+        example: 342342-42343242-42334
+
+    post:
+      tags:
+        - Ledger
+      summary: Record a deposit or withdrawal
+      description: Records a deposit or withdrawal against given ledger.
+      operationId: createTransaction
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequest'
+            examples:
+              deposit:
+                summary: Deposit £100
+                value:
+                  type: deposit
+                  amount: "10000"
+              withdrawal:
+                summary: Withdraw £25
+                value:
+                  type: withdrawal
+                  amount: "2500"
+
+      responses:
+        '201':
+          description: Transaction recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                type: deposit
+                amount: "10000"
+                balanceAfter: "10000"
+                createdAt: "2026-09-25T20:00:00Z"
+
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidAmount:
+                  summary: Invalid amount
+                  value:
+                    code: VALIDATION_FAILED
+                    message: "The value of the request body is invalid. Reason: Property \"amount\" does not match additional properties schema at #/amount"
+                invalidType:
+                  summary: Invalid transaction type
+                  value:
+                    code: VALIDATION_FAILED
+                    message: "The value of the request body is invalid. Reason: Property \"type\" does not match additional properties schema at #/type"
+
+        '404':
+          description: Ledger not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      tags:
+        - Ledger
+      summary: Get transaction history
+      description: Returns all transactions recorded in the ledger.
+      operationId: getTransactions
+
+      parameters:
+        - name: type
+          in: query
+          required: false
+          description: Filter transactions by type.
+          schema:
+            $ref: '#/components/schemas/TransactionType'
+
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of transactions to return.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+
+        - name: offset
+          in: query
+          required: false
+          description: Number of transactions to skip before returning results
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+
+      responses:
+        '200':
+          description: Transaction history
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - transactions
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+              example:
+                transactions:
+                  - id: "550e8400-e29b-41d4-a716-446655440000"
+                    type: deposit
+                    amount: "10000"
+                    balanceAfter: "10000"
+                    createdAt: "2026-09-25T20:00:00Z"
+                  - id: "650e8400-e29b-41d4-a716-446655440001"
+                    type: withdrawal
+                    amount: "2500"
+                    balanceAfter: "7500"
+                    createdAt: "2026-09-25T20:05:00Z"
+
+        '400':
+          description: Invalid ledger ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '404':
+          description: Ledger not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ledger/{ledgerId}/balance:
+    parameters:
+      - name: ledgerId
+        in: path
+        required: true
+        description: Unique identifier of the ledger.
+        schema:
+          type: string
+        example: 342342-42343242-42334
+
+    get:
+      tags:
+        - Ledger
+      summary: Get current ledger balance
+      description: Current balance for the ledger id.
+      operationId: getBalance
+
+      responses:
+        '200':
+          description: Current balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Balance'
+              example:
+                balance: "7500"
+                currency: GBP
+
+        '400':
+          description: Invalid ledger ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '404':
+          description: Ledger not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+
+    CreateLedgerRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - currency
+      properties:
+        currency:
+          type: string
+          description: ISO 4217 currency code for the ledger.
+          example: GBP
+          pattern: '^[A-Z]{3}$'
+
+    Ledger:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - balance
+        - currency
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the ledger.
+          example: "342342-42343242-42334"
+
+        balance:
+          type: string
+          pattern: '^\d+$'
+          description: Current ledger balance in minor currency units.
+          example: "0"
+
+        currency:
+          type: string
+          description: ISO 4217 currency code.
+          example: GBP
+          pattern: '^[A-Z]{3}$'
+
+        createdAt:
+          type: string
+          format: date-time
+          description: Time at which the ledger was created.
+          example: "2026-09-26T12:00:00Z"
+
+    CreateTransactionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - amount
+      properties:
+        type:
+          $ref: '#/components/schemas/TransactionType'
+        amount:
+          type: string
+          pattern: '^\d+$'
+          maxLength: 18
+          description: |
+            Amount in minor currency units. For example, 1050 represents
+            £10.50 when the currency is GBP.
+          example: "10000"
+
+    Transaction:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - amount
+        - balanceAfter
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the transaction.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+
+        type:
+          $ref: '#/components/schemas/TransactionType'
+
+        amount:
+          type: string
+          pattern: '^\d+$'
+          description: Transaction amount in minor currency units.
+          example: "10000"
+
+        balanceAfter:
+          type: string
+          pattern: '^\d+$'
+          description: Balance after this transaction
+          example: "10000"
+
+        createdAt:
+          type: string
+          format: date-time
+          description: Time created at
+          example: "2026-09-25T20:00:00Z"
+
+    TransactionType:
+      type: string
+      enum:
+        - deposit
+        - withdrawal
+      description: The type of transaction.
+
+    Balance:
+      type: object
+      additionalProperties: false
+      required:
+        - balance
+        - currency
+      properties:
+        balance:
+          type: string
+          pattern: '^\d+$'
+          description: Current balance in most minor currency unit.
+          example: "7500"
+
+        currency:
+          type: string
+          description: ISO 4217 currency code.
+          example: GBP
+          pattern: '^[A-Z]{3}$'
+
+    Error:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code.
+          example: LEDGER_NOT_FOUND
+
+        message:
+          type: string
+          description: Description of the error.
+          example: Ledger not found.
