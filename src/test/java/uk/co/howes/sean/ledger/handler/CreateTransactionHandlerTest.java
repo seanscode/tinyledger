@@ -1,5 +1,6 @@
 package uk.co.howes.sean.ledger.handler;
 
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
@@ -8,6 +9,7 @@ import io.vertx.openapi.validation.RequestParameter;
 import io.vertx.openapi.validation.ValidatedRequest;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import uk.co.howes.sean.ledger.exceptions.OverDrawnException;
 import uk.co.howes.sean.ledger.model.Ledger;
 import uk.co.howes.sean.ledger.model.Transaction;
 import uk.co.howes.sean.ledger.model.TransactionType;
@@ -17,6 +19,7 @@ import java.util.Map;
 
 import static io.vertx.ext.web.openapi.router.RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -33,6 +36,7 @@ class CreateTransactionHandlerTest {
     RoutingContext context = transactionContext(LEDGER_ID, "deposit", "500");
     HttpServerResponse response = context.response();
     when(response.setStatusCode(201)).thenReturn(response);
+    when(response.putHeader(HttpHeaders.CONTENT_TYPE, "application/json")).thenReturn(response);
 
     new CreateTransactionHandler(Map.of(LEDGER_ID, ledger)).handle(context);
 
@@ -51,6 +55,7 @@ class CreateTransactionHandlerTest {
     assertEquals(transaction.getCreatedAt().toString(), responseBody.getString("createdAt"));
   }
 
+
   @Test
   void returnsNotFoundWhenLedgerDoesNotExist() {
     RoutingContext context = transactionContext("missing", "withdrawal", "10");
@@ -60,6 +65,19 @@ class CreateTransactionHandlerTest {
     new CreateTransactionHandler(Map.of()).handle(context);
 
     verify(response).end(anyString());
+  }
+
+  @Test
+  void negativeBalanceResultsInInsufficentFundsError() {
+    Ledger ledger = new Ledger("overdrawn", "GBP");
+    RoutingContext context = transactionContext("overdrawn", "withdrawal", "500");
+    HttpServerResponse response = context.response();
+    when(response.setStatusCode(422)).thenReturn(response);
+
+    assertThrows(OverDrawnException.class, () ->
+      new CreateTransactionHandler(Map.of("overdrawn", ledger)).handle(context));
+
+
   }
 
   private RoutingContext transactionContext(String ledgerId, String type, String amount) {

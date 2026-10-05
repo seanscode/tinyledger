@@ -1,5 +1,6 @@
 package uk.co.howes.sean.ledger.handler;
 
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
@@ -34,6 +35,7 @@ class CreateLedgerHandlerTest {
     when(body.getJsonObject()).thenReturn(new JsonObject().put("currency", "GBP"));
     when(context.response()).thenReturn(response);
     when(response.setStatusCode(201)).thenReturn(response);
+    when(response.putHeader(HttpHeaders.CONTENT_TYPE, "application/json")).thenReturn(response);
 
     new CreateLedgerHandler(ledgers).handle(context);
 

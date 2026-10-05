@@ -20,7 +20,7 @@ public class MainVerticle extends VerticleBase {
 
   private static final int PORT = 8888;
   private static final String SERVER_STARTED_ON = "Server Started on %d\n";
-  private final Map<String,Ledger> ledgerMap = new ConcurrentHashMap<>();
+  private final Map<String, Ledger> ledgerMap = new ConcurrentHashMap<>();
 
   @Override
   public Future<?> start() {
@@ -43,8 +43,7 @@ public class MainVerticle extends VerticleBase {
       .onSuccess(server -> System.out.printf(SERVER_STARTED_ON, PORT))
       .onFailure(t -> {
         t.printStackTrace();
-        vertx.close();
-        System.exit(1);
+        vertx.close().onComplete(ignored -> System.exit(1));
       });
   }
 

@@ -85,8 +85,8 @@ class TransactionHandlerTest {
   @Test
   void filtersByTypeWhenAnEarlierTransactionDoesNotMatch() {
     Ledger ledger = new Ledger(LEDGER_ID, "GBP");
-    ledger.addTransaction("withdrawal", BigInteger.valueOf(25));
     ledger.addTransaction("deposit", BigInteger.valueOf(100));
+    ledger.addTransaction("withdrawal", BigInteger.valueOf(25));
     RoutingContext context = contextFor(LEDGER_ID);
     when(context.request().getParam("type")).thenReturn("deposit");
 

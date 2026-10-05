@@ -1,6 +1,7 @@
 package uk.co.howes.sean.ledger.handler;
 
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.openapi.validation.ValidatedRequest;
@@ -25,7 +26,10 @@ public class CreateLedgerHandler implements Handler<RoutingContext> {
     ledgerMap.put(ledger.getLedgerId(),ledger);
 
     JsonObject response = buildCreateLedgerResponse(ledger);
-    routingContext.response().setStatusCode(CREATED.code()).end(response.encode());
+    routingContext.response()
+      .setStatusCode(CREATED.code())
+      .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+      .end(response.encode());
   }
 
   private static JsonObject buildCreateLedgerResponse(Ledger ledger) {

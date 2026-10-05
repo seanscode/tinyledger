@@ -6,6 +6,8 @@ import io.vertx.ext.web.RoutingContext;
 import uk.co.howes.sean.ledger.model.Ledger;
 
 import java.math.BigInteger;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 public class BalanceHandler implements Handler<RoutingContext> {
@@ -19,6 +21,7 @@ public class BalanceHandler implements Handler<RoutingContext> {
   @Override
   public void handle(RoutingContext routingContext) {
     String ledgerId = routingContext.request().getParam("ledgerId");
+    String atTime = routingContext.request().getParam("atTime");
 
     Ledger ledger = ledgerMap.get(ledgerId);
 
@@ -27,13 +30,23 @@ public class BalanceHandler implements Handler<RoutingContext> {
       return;
     }
 
-    JsonObject response = buildBalanceResponse(ledger);
+    BigInteger balance;
+    if (atTime == null) {
+      balance = ledger.getCurrentBalance();
+    } else {
+      try {
+        balance = ledger.getBalanceAt(OffsetDateTime.parse(atTime).toInstant());
+      } catch (DateTimeParseException e) {
+        ErrorResponse.sendValidationError(routingContext, e);
+        return;
+      }
+    }
+
+    JsonObject response = buildBalanceResponse(ledger, balance);
     routingContext.json(response);
   }
 
-  private static JsonObject buildBalanceResponse(Ledger ledger) {
-    BigInteger balance = ledger.getCurrentBalance();
-
+  private static JsonObject buildBalanceResponse(Ledger ledger, BigInteger balance) {
     JsonObject response = new JsonObject();
     response.put("balance", balance.toString());
     response.put("currency", ledger.getCurrency());

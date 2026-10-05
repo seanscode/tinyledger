@@ -22,10 +22,10 @@ Amounts are represented as integer minor units. For example, £10.50 is represen
 
 The ledger stores an ISO 4217 currency code alongside the amounts so that clients can determine how the value should be displayed.
 The creation of the ledger validates the code is 3 letters but does not validate its a real valid iso code.
-m
+
 ### Overdrafts
 
-Withdrawals are allowed to take the ledger balance below zero. No overdraft limit is enforced. I did not want to assume that was a limit.
+The ledger now returns a 442 for any transaction that would take it overdrawan
 
 ### Transactions
 

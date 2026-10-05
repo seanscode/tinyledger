@@ -15,7 +15,6 @@ servers:
     description: assumes server runs on local host
 
 paths:
-
   /ledger:
     post:
       summary: Create a ledger
@@ -199,6 +198,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '422':
+          description: Overdrawn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /ledger/{ledgerId}/balance:
     parameters:
@@ -209,7 +214,14 @@ paths:
         schema:
           type: string
         example: 342342-42343242-42334
-
+      - name: atTime
+        in: query
+        required: false
+        description: Gets balance given the time
+        schema:
+          type: string
+          format: date-time
+          example: "2026-09-25T20:00:00Z"
     get:
       tags:
         - Ledger
@@ -241,7 +253,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
 components:
   schemas:
 

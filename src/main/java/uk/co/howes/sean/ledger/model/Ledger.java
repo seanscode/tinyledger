@@ -1,5 +1,7 @@
 package uk.co.howes.sean.ledger.model;
 
+import uk.co.howes.sean.ledger.exceptions.OverDrawnException;
+
 import java.math.BigInteger;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -43,16 +45,36 @@ public class Ledger {
       .reduce(BigInteger.ZERO, BigInteger::add);
   }
 
-  public Transaction addTransaction(String type, BigInteger amount) {
+  public Transaction addTransaction(String type, BigInteger amount) throws OverDrawnException {
     BigInteger balanceAfter = getCurrentBalance();
     TransactionType transactionType = TransactionType.valueOf(type.toUpperCase(Locale.ROOT));
     if (transactionType == TransactionType.DEPOSIT) {
       balanceAfter = balanceAfter.add(amount);
     } else {
-      balanceAfter = balanceAfter.subtract(amount);
+
+      BigInteger result = balanceAfter.subtract(amount);
+      if (result.compareTo(BigInteger.ZERO) < 0) {
+        throw new OverDrawnException();
+      }
+      balanceAfter = result;
     }
     Transaction transaction = new Transaction(transactionType, amount, balanceAfter);
     transactionsList.add(transaction);
     return transaction;
+  }
+
+  public BigInteger getBalanceAt(Instant atTime) {
+    Transaction lastBeforeTime = null;
+
+    for (Transaction transaction : transactionsList) {
+      if (transaction.getCreatedAt().compareTo(atTime) <= 0) {
+        lastBeforeTime = transaction;
+      }
+    }
+    BigInteger balance = BigInteger.ZERO;
+    if (lastBeforeTime != null) {
+      balance = lastBeforeTime.getBalanceAfter();
+    }
+    return balance;
   }
 }

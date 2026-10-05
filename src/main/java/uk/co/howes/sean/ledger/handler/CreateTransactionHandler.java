@@ -1,6 +1,7 @@
 package uk.co.howes.sean.ledger.handler;
 
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.openapi.validation.ValidatedRequest;
@@ -14,9 +15,9 @@ import static io.vertx.ext.web.openapi.router.RouterBuilder.*;
 
 public class CreateTransactionHandler implements Handler<RoutingContext> {
 
-  private final Map<String,Ledger> ledgerMap;
+  private final Map<String, Ledger> ledgerMap;
 
-  public CreateTransactionHandler(Map<String,Ledger> ledgerMap) {
+  public CreateTransactionHandler(Map<String, Ledger> ledgerMap) {
     this.ledgerMap = ledgerMap;
   }
 
@@ -27,25 +28,28 @@ public class CreateTransactionHandler implements Handler<RoutingContext> {
 
     JsonObject body = request.getBody().getJsonObject();
     String type = body.getString("type");
-    BigInteger amount = new BigInteger(body.getString("amount"));
 
-    if(BigInteger.ZERO.equals(amount)) {
-      ErrorResponse.sendInvalidAmountError(routingContext);
-      return;
-    }
 
     String ledgerId = routingContext.request().getParam("ledgerId");
     Ledger ledger = ledgerMap.get(ledgerId);
 
 
-    if(ledger == null) {
+    if (ledger == null) {
       ErrorResponse.sendLedgerNotFoundError(routingContext);
-    } else{
-      JsonObject response = TransactionResponse.from(ledger.addTransaction(type, amount));
-      routingContext.response().setStatusCode(CREATED.code()).end(response.encode());
-    }
+    } else {
+      BigInteger amount = new BigInteger(body.getString("amount"));
 
+      if (BigInteger.ZERO.equals(amount)) {
+        ErrorResponse.sendInvalidAmountError(routingContext);
+        return;
+      }
+      JsonObject response = TransactionResponse.from(ledger.addTransaction(type, amount));
+      routingContext.response()
+        .setStatusCode(CREATED.code())
+        .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+        .end(response.encode());
     }
   }
+}
 
 

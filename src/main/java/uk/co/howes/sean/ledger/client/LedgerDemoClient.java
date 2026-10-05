@@ -43,9 +43,10 @@ public final class LedgerDemoClient {
     printResponse("List all transactions", get("/ledger/" + ledgerId + "/transactions"));
 
     String ledger2 = post("/ledger", "{\"currency\":\"GBP\"}");
+    String ledger2Id = getLedgerId(ledger2);
     printResponse("Create second ledger", ledger2);
-    printResponse("List all transactions", get("/ledger/" + getLedgerId(ledger2) + "/transactions"));
-
+    printResponse("List all transactions", get("/ledger/" + ledger2Id + "/transactions"));
+    printResponse("Withdraw 250", postTransaction(ledger2Id, "withdrawal", "250"));
   }
 
   private String postTransaction(String ledgerId, String type, String amount) throws IOException, InterruptedException {

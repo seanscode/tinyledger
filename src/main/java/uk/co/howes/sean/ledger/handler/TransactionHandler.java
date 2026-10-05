@@ -7,7 +7,6 @@ import io.vertx.ext.web.RoutingContext;
 import uk.co.howes.sean.ledger.model.Ledger;
 import uk.co.howes.sean.ledger.model.Transaction;
 
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -21,7 +20,7 @@ public class TransactionHandler implements Handler<RoutingContext> {
 
   @Override
   public void handle(RoutingContext routingContext) {
-    String ledgerId = routingContext.request().getParam("ledgerId");
+   String ledgerId = routingContext.request().getParam("ledgerId");
    Ledger ledger = ledgerMap.get(ledgerId);
 
     if (ledger == null) {
@@ -40,19 +39,21 @@ public class TransactionHandler implements Handler<RoutingContext> {
     routingContext.json(reponse);
   }
 
-  private static JsonObject buildResponse(Ledger ledger, String type, int transactionOffset, int transactionLimit) {
-    JsonArray jsonArray = new JsonArray();
+  private static JsonObject buildResponse(Ledger ledger, String type, int offset, int limit) {
+    JsonArray transactions = new JsonArray();
 
-    int matched = 0;
-    List<Transaction> transactionsList = ledger.getTransactionsList();
-    for(int i = transactionOffset; i <  transactionsList.size() && matched < transactionLimit; i++) {
-      Transaction transaction = transactionsList.get(i);
-      if (type == null || transaction.getType().name().toLowerCase(Locale.ROOT).equals(type)) {
-        jsonArray.add(TransactionResponse.from(transaction));
-        matched++;
-      }
-    }
-    return new JsonObject().put("transactions", jsonArray);
+    ledger.getTransactionsList().stream()
+      .filter(t -> type == null || isMatchingType(type, t))
+      .skip(offset)
+      .limit(limit)
+      .map(TransactionResponse::from)
+      .forEach(transactions::add);
+
+    return new JsonObject().put("transactions", transactions);
+  }
+
+  private static boolean isMatchingType(String type, Transaction transaction) {
+    return transaction.getType().name().toLowerCase(Locale.ROOT).equals(type);
   }
 }
 
