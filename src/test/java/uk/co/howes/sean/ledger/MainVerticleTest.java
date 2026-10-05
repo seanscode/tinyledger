@@ -123,12 +123,12 @@ class MainVerticleTest {
   }
 
   @Test
-  void negativeAmountsRejected() throws Exception {
+  void zeroTransactionIsRejected() throws Exception {
     String ledgerId = createLedger();
 
-    HttpResponse<String> response = postTransaction(ledgerId, "deposit", "-400");
+    HttpResponse<String> response = postTransaction(ledgerId, "deposit", "0");
 
-    assertEquals(400, response.statusCode(), "response body: " + response.body());
+    assertEquals(422, response.statusCode(), "response body: " + response.body());
   }
 
   @Test

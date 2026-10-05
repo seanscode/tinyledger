@@ -76,8 +76,6 @@ class CreateTransactionHandlerTest {
 
     assertThrows(OverDrawnException.class, () ->
       new CreateTransactionHandler(Map.of("overdrawn", ledger)).handle(context));
-
-
   }
 
   private RoutingContext transactionContext(String ledgerId, String type, String amount) {
